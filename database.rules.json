@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" }
+      }
+    },
+    "messages": {
+      ".read": "auth != null",
+      "$messageId": {
+        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 500",
+        ".validate": "newData.hasChildren(['uid', 'name', 'text', 'createdAt'])"
+      }
+    }
+  }
+}
