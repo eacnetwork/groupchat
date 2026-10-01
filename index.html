@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A simple real-time group chat.">
+  <meta name="description" content="A real-time public group chat.">
   <title>GroupChat</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,28 +20,56 @@
           <p class="eyebrow">PUBLIC ROOM</p>
           <h1>GroupChat</h1>
         </div>
-        <div id="connection-status" class="status" role="status">Connecting…</div>
+
+        <div id="connection-status" class="status" role="status">
+          Connecting…
+        </div>
       </header>
 
       <div id="setup-notice" class="notice hidden" role="alert"></div>
-      <div id="messages" class="messages" aria-live="polite" aria-label="Messages">
+
+      <div id="messages" class="messages" aria-live="polite">
         <p class="empty-state">Loading messages…</p>
       </div>
 
       <form id="message-form" class="composer" autocomplete="off">
         <label class="sr-only" for="message-input">Message</label>
-        <input id="message-input" maxlength="500" placeholder="Write a message…" disabled>
+
+        <input
+          id="message-input"
+          type="text"
+          maxlength="500"
+          placeholder="Write a message…"
+          disabled
+        >
+
         <button type="submit" disabled>Send</button>
       </form>
     </section>
   </main>
 
   <dialog id="name-dialog" class="name-dialog">
-    <form id="name-form" method="dialog">
+    <form id="name-form">
       <h2>Join GroupChat</h2>
-      <p>Your name is saved securely in the shared database, so it works on all your devices.</p>
+
+      <p>
+        Choose a name. Your name will be stored in the shared database,
+        not only on this device.
+      </p>
+
       <label for="name-input">Display name</label>
-      <input id="name-input" name="name" maxlength="40" minlength="1" required autocomplete="name" placeholder="e.g. Alex">
+
+      <input
+        id="name-input"
+        name="name"
+        type="text"
+        maxlength="40"
+        minlength="1"
+        autocomplete="name"
+        placeholder="e.g. Alex"
+        required
+      >
+
       <button type="submit">Join chat</button>
     </form>
   </dialog>
