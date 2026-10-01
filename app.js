@@ -1,126 +1,274 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getDatabase, ref, get, set, push, query, orderByChild, limitToLast, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.0/+esm";
 
-const $ = (selector) => document.querySelector(selector);
-const messagesEl = $("#messages");
-const form = $("#message-form");
-const messageInput = $("#message-input");
-const sendButton = form.querySelector("button");
-const nameDialog = $("#name-dialog");
-const nameForm = $("#name-form");
-const nameInput = $("#name-input");
-const statusEl = $("#connection-status");
-const setupNotice = $("#setup-notice");
+const SUPABASE_URL = "https://ublmdrosnkxwitoygxyq.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_z-TDvg8Lw2Ynz8j_VWRIpQ_9e7LhHJq";
 
-let app;
-let auth;
-let database;
-let currentUser;
-let currentProfile;
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
-function showSetupError(message) {
-  setupNotice.textContent = message;
-  setupNotice.classList.remove("hidden");
-  statusEl.textContent = "Setup required";
-  statusEl.classList.add("offline");
-  messagesEl.innerHTML = "<p class='empty-state'>The chat is not configured yet.</p>";
+const messagesElement = document.querySelector("#messages");
+const messageForm = document.querySelector("#message-form");
+const messageInput = document.querySelector("#message-input");
+const sendButton = messageForm.querySelector("button");
+
+const nameDialog = document.querySelector("#name-dialog");
+const nameForm = document.querySelector("#name-form");
+const nameInput = document.querySelector("#name-input");
+
+const statusElement = document.querySelector("#connection-status");
+const noticeElement = document.querySelector("#setup-notice");
+
+let currentUser = null;
+let currentProfile = null;
+let realtimeChannel = null;
+
+function showError(message) {
+  noticeElement.textContent = message;
+  noticeElement.classList.remove("hidden");
+
+  statusElement.textContent = "Connection error";
+  statusElement.classList.add("offline");
+
+  messageInput.disabled = true;
+  sendButton.disabled = true;
 }
 
-function configured() {
-  return firebaseConfig && Object.values(firebaseConfig).every(Boolean) && !firebaseConfig.apiKey.includes("PASTE_");
+function clearError() {
+  noticeElement.textContent = "";
+  noticeElement.classList.add("hidden");
+  statusElement.classList.remove("offline");
 }
 
 function renderMessage(message) {
-  const item = document.createElement("article");
-  item.className = `message ${message.uid === currentUser.uid ? "mine" : ""}`;
+  const article = document.createElement("article");
+
+  article.className = "message";
+
+  if (currentUser && message.user_id === currentUser.id) {
+    article.classList.add("mine");
+  }
+
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  const name = document.createElement("strong");
-  name.textContent = message.name || "Anonymous";
+
+  const author = document.createElement("strong");
+  author.textContent = message.user_name || "Anonymous";
+
   const text = document.createElement("p");
   text.textContent = message.text;
+
   const time = document.createElement("time");
-  if (message.createdAt) time.textContent = new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  bubble.append(name, text, time);
-  item.appendChild(bubble);
-  messagesEl.appendChild(item);
+
+  if (message.created_at) {
+    time.textContent = new Date(
+      message.created_at
+    ).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  bubble.append(author, text, time);
+  article.appendChild(bubble);
+  messagesElement.appendChild(article);
 }
 
-function listenForMessages() {
-  const messagesQuery = query(ref(database, "messages"), orderByChild("createdAt"), limitToLast(100));
-  onValue(messagesQuery, (snapshot) => {
-    messagesEl.replaceChildren();
-    if (!snapshot.exists()) {
-      messagesEl.innerHTML = "<p class='empty-state'>No messages yet. Say hello!</p>";
-      return;
-    }
-    const messages = [];
-    snapshot.forEach((child) => messages.push({ id: child.key, ...child.val() }));
-    messages.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).forEach(renderMessage);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }, () => showSetupError("Could not read messages. Check your Realtime Database rules."));
+async function loadMessages() {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id, user_id, user_name, text, created_at")
+    .order("created_at", {
+      ascending: true
+    })
+    .limit(100);
+
+  if (error) {
+    console.error(error);
+    showError("Could not load messages. Check your Supabase setup.");
+    return;
+  }
+
+  messagesElement.replaceChildren();
+
+  if (!data || data.length === 0) {
+    messagesElement.innerHTML =
+      "<p class='empty-state'>No messages yet. Say hello!</p>";
+    return;
+  }
+
+  for (const message of data) {
+    renderMessage(message);
+  }
+
+  messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
-async function loadOrCreateProfile(user) {
-  const profileRef = ref(database, `users/${user.uid}`);
-  const snapshot = await get(profileRef);
-  if (snapshot.exists() && snapshot.val().name) return snapshot.val();
+function subscribeToMessages() {
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+  }
+
+  realtimeChannel = supabase
+    .channel("public-messages")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages"
+      },
+      (payload) => {
+        const emptyState = messagesElement.querySelector(".empty-state");
+
+        if (emptyState) {
+          emptyState.remove();
+        }
+
+        renderMessage(payload.new);
+        messagesElement.scrollTop = messagesElement.scrollHeight;
+      }
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        statusElement.textContent = `Online · ${currentProfile.name}`;
+      }
+    });
+}
+
+async function getOrCreateProfile(user) {
+  const { data: existingProfile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
   nameDialog.showModal();
-  return new Promise((resolve) => {
-    nameForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const name = nameInput.value.trim();
-      if (!name) return;
-      const profile = { name, createdAt: serverTimestamp() };
-      await set(profileRef, profile);
-      nameDialog.close();
-      resolve({ name });
-    }, { once: true });
+  nameInput.focus();
+
+  return new Promise((resolve, reject) => {
+    nameForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+
+        const name = nameInput.value.trim();
+
+        if (!name) {
+          nameInput.focus();
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            name
+          })
+          .select("id, name")
+          .single();
+
+        if (error) {
+          console.error(error);
+          alert("Could not save your name. Please try again.");
+          reject(error);
+          return;
+        }
+
+        nameDialog.close();
+        resolve(data);
+      },
+      { once: true }
+    );
   });
 }
 
-form.addEventListener("submit", async (event) => {
+messageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const text = messageInput.value.trim();
-  if (!text || !currentUser || !currentProfile) return;
-  sendButton.disabled = true;
-  try {
-    await push(ref(database, "messages"), { uid: currentUser.uid, name: currentProfile.name, text, createdAt: serverTimestamp() });
-    messageInput.value = "";
-  } catch {
-    showSetupError("Your message could not be sent. Check the database rules.");
-  } finally {
-    sendButton.disabled = false;
-    messageInput.focus();
-  }
-});
 
-async function start() {
-  if (!configured()) {
-    showSetupError("Add your Firebase web settings to firebase-config.js, then redeploy this site.");
+  const text = messageInput.value.trim();
+
+  if (!text || !currentUser || !currentProfile) {
     return;
   }
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    database = getDatabase(app);
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-      currentUser = user;
-      currentProfile = await loadOrCreateProfile(user);
-      statusEl.textContent = `Online · ${currentProfile.name}`;
-      statusEl.classList.remove("offline");
-      messageInput.disabled = false;
-      sendButton.disabled = false;
-      listenForMessages();
-      messageInput.focus();
+
+  sendButton.disabled = true;
+
+  const { error } = await supabase
+    .from("messages")
+    .insert({
+      user_id: currentUser.id,
+      user_name: currentProfile.name,
+      text
     });
-    await signInAnonymously(auth);
+
+  if (error) {
+    console.error(error);
+    showError("Your message could not be sent.");
+  } else {
+    clearError();
+    messageInput.value = "";
+    messageInput.focus();
+  }
+
+  sendButton.disabled = false;
+});
+
+async function startChat() {
+  try {
+    const {
+      data: sessionData,
+      error: sessionError
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    let user = sessionData.session?.user;
+
+    if (!user) {
+      const {
+        data: anonymousData,
+        error: anonymousError
+      } = await supabase.auth.signInAnonymously();
+
+      if (anonymousError) {
+        throw anonymousError;
+      }
+
+      user = anonymousData.user;
+    }
+
+    currentUser = user;
+    currentProfile = await getOrCreateProfile(user);
+
+    clearError();
+
+    statusElement.textContent = `Online · ${currentProfile.name}`;
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+
+    await loadMessages();
+    subscribeToMessages();
+
+    messageInput.focus();
   } catch (error) {
     console.error(error);
-    showSetupError("Firebase could not start. Check firebase-config.js and enable Anonymous Authentication.");
+    showError(
+      "Could not connect. Enable anonymous sign-ins in Supabase and check the database tables."
+    );
   }
 }
-start();
+
+startChat();
