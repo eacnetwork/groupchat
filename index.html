@@ -3,11 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;"><meta name="description" content="Private group chat for approved users only" />
-    <title>Private GroupChat</title>
+    <meta
+      name="description"
+      content="ts for luh gc"
+    />
+    <title>jewish groupchat</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -16,13 +24,13 @@
         <div class="brand-block">
           <div class="brand-mark">G</div>
           <div>
-            <p class="eyebrow">Private room</p>
-            <h1>GroupChat</h1>
+            <p class="eyebrow">for jews</p>
+            <h1>GC</h1>
           </div>
         </div>
 
         <div class="user-card">
-          <div class="avatar">{{initials}}</div>
+          <div class="avatar">A</div>
           <div>
             <p class="label">Signed in</p>
             <strong id="current-user-name">Loading…</strong>
@@ -30,14 +38,16 @@
           </div>
         </div>
 
-        <button id="logout-button" class="logout-button" type="button">Log out</button>
+        <button id="logout-button" class="logout-button" type="button">
+          log out luh boi
+        </button>
       </aside>
 
       <main class="chat-panel">
         <header class="chat-header">
           <div>
-            <p class="eyebrow">Approved users only</p>
-            <h2>Private discussions</h2>
+            <p class="eyebrow">jewish users only</p>
+            <h2>private planning discussions</h2>
           </div>
         </header>
 
@@ -46,18 +56,31 @@
 
         <div class="composer-wrap">
           <div class="attachment-row">
-            <label class="attachment-button" for="image-upload">Image</label>
-            <label class="attachment-button" for="camera-upload">Photo</label>
-            <button id="voice-toggle" class="attachment-button" type="button">Voice note</button>
+            <label class="attachment-button" for="image-upload">el image</label>
+            <label class="attachment-button" for="camera-upload">el photo</label>
+            <button id="voice-toggle" class="attachment-button" type="button">
+              el voice note
+            </button>
           </div>
 
           <div class="composer-tools">
             <input id="image-upload" type="file" accept="image/*" hidden />
-            <input id="camera-upload" type="file" accept="image/*" capture="environment" hidden />
+            <input
+              id="camera-upload"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+            />
           </div>
 
           <form id="composer-form" class="composer">
-            <textarea id="message-input" rows="1" placeholder="Write a message…" maxlength="1000"></textarea>
+            <textarea
+              id="message-input"
+              rows="1"
+              placeholder="send your plan..."
+              maxlength="1000"
+            ></textarea>
             <button type="submit" class="send-button">Send</button>
           </form>
         </div>
@@ -68,19 +91,31 @@
       <div class="auth-card">
         <div class="auth-header">
           <div class="brand-mark large">G</div>
-          <h2>Private GroupChat</h2>
-          <p>Approved school accounts only</p>
+          <h2>jews gc</h2>
+          <p>approved jews only</p>
         </div>
 
         <form id="auth-form" class="auth-form">
           <label>
-            <span>Email</span>
-            <input id="email-input" type="email" placeholder="name@school.com" autocomplete="email" required />
+            <span>el email</span>
+            <input
+              id="email-input"
+              type="email"
+              placeholder="jews@jews.jew"
+              autocomplete="email"
+              required
+            />
           </label>
 
           <label>
-            <span>Password</span>
-            <input id="password-input" type="password" placeholder="Enter your password" autocomplete="current-password" required />
+            <span>el pass</span>
+            <input
+              id="password-input"
+              type="password"
+              placeholder="Create or enter your password"
+              autocomplete="current-password"
+              required
+            />
           </label>
 
           <button type="submit" class="primary-button">Continue</button>
